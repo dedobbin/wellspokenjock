@@ -55,3 +55,7 @@ def parse_to_int(input: str, type: str or None = None):
     except ValueError:
         logging.warning("parse_to_int: Failed to parse '%s'" % str(given_input))
         return None
+
+def to_file(input: str, filename: str="output.html"):
+    with open(filename, "w") as f:
+        f.write(input)

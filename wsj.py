@@ -1,7 +1,7 @@
 import requests
 import logging
 from bs4 import BeautifulSoup
-from common import BadResponse, parse_to_int
+from common import BadResponse, parse_to_int, to_file
 
 headers = {
   "Host" : "www.wsj.com",
@@ -14,11 +14,12 @@ class CompanyData:
     url : str = ""
     name : str = ""
 
+    #overview data
     company_value = None
     shares_outstanding = None
     public_float = None
-    overview_currency = None #Will hold something like "$"
 
+    #balance sheet data
     assets_currency_type = None #Will hold something like "CAD"
     net_property_plant_and_equipment = None
     total_assets = None
@@ -42,7 +43,6 @@ def get_company_data(name: str, url: str) -> CompanyData:
         return company_data
       
     company_data.company_value = overview_data["company_value"]
-    company_data.overview_currency = overview_data["overview_currency"]
     company_data.shares_outstanding = overview_data["shares_outstanding"]
     company_data.public_float = overview_data["public_float"]
 
@@ -80,12 +80,11 @@ def get_overview_data(url: str):
     }
 
     market_value_elems = soup.select("[class*=WSJTheme--cr_num] *")
-    if len(market_value_elems) < 2:
-        logging.info("Failed to get overview_data from " + url)
-        return output
+    if len(market_value_elems) > 2:
+        output["company_value"] = parse_to_int(market_value_elems[1].decode_contents())
+    else:
+        logging.info("Failed to get company value from " + url)
 
-    output["overview_currency"] = market_value_elems[0].decode_contents()
-    output["company_value"] = parse_to_int(market_value_elems[1].decode_contents())
 
     key_stock_data = soup.select("[class*=cr_data_field]")
 
