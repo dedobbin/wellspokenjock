@@ -4,6 +4,26 @@ from time import sleep
 from random import randrange
 import logging
 
+def get_meaningful_data(company_data: wsj.CompanyData):
+  output = {
+    "market_value": None,
+    "fair_value": None,
+    "market_to_fair_value_margin": None,
+  }
+
+  output["fair_value"] = company_data.get_fair_value()
+  if not output["fair_value"]:
+    return output
+
+  if company_data.market_value:
+    output["market_value"] = company_data.market_value
+    output["market_to_fair_value_margin"] = company_data.market_value / output["fair_value"]
+  else:
+      logging.warning("get_meaningful_data: Can't calculate market_to_fair_value_margin because company has no market_value, "
+         + company_data.name)
+    
+  return output
+
 def main():
   logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s', level=logging.INFO)
 
@@ -23,6 +43,14 @@ def main():
         logging.error("Could not get data of '" + (company_link["name"] if "name" in company_link else "unknown company") + "': " +  str(e))
         continue
       #print(company_data.to_str())
+      meaningful_data = get_meaningful_data(company_data)
+      if meaningful_data["market_value"] and meaningful_data["fair_value"] and meaningful_data["market_to_fair_value_margin"]:
+        print(meaningful_data)
+      else:
+        logging.warning("FAILED getting meaningful data for " + company_link["name"])
+        
+
+
       sleep(randrange(5))
 
 if __name__ == "__main__":

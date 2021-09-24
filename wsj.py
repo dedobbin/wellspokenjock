@@ -15,7 +15,7 @@ class CompanyData:
     name : str = ""
 
     #overview data
-    company_value = None
+    market_value = None
     shares_outstanding = None
     public_float = None
 
@@ -30,6 +30,15 @@ class CompanyData:
         self.name = name
         self.url = url
 
+    def get_fair_value(self)->float or None:
+        res = None
+        try:
+            AA = self.total_assets - self.net_property_plant_and_equipment - self.net_goodwill - self.total_assets
+            res = AA / self.shares_outstanding
+        except TypeError:
+            logging.warning("Cannot calculate fair_value of " + self.name)
+
+        return res
     def to_str(self):
         return str(self.__dict__)
 
@@ -38,11 +47,13 @@ def get_company_data(name: str, url: str) -> CompanyData:
     company_data = CompanyData(name, url)
 
     overview_data = get_overview_data(url)
-    if (not overview_data["shares_outstanding"] and not overview_data["public_float"]):
+    if (not overview_data["market_value"] or
+        (not overview_data["shares_outstanding"] and not overview_data["public_float"])
+    ):
         logging.info("Requested data not found on company overview " + url + ", aborting")
         return company_data
       
-    company_data.company_value = overview_data["company_value"]
+    company_data.market_value = overview_data["market_value"]
     company_data.shares_outstanding = overview_data["shares_outstanding"]
     company_data.public_float = overview_data["public_float"]
 
@@ -68,23 +79,19 @@ def get_company_list_page(page: int=1):
     return __get_html(url)
 
 def get_overview_data(url: str):
-    """Returns dict with shares_outstanding and public_float"""
+    """Returns dict with shares_outstanding, public_float and market_value"""
     html = __get_html(url)
     soup = BeautifulSoup(html, features="html.parser")
 
     output = {
         "shares_outstanding": None, 
         "public_float": None, 
-        "company_value":None, 
-        "overview_currency": None
+        "market_value":None, 
     }
 
     market_value_elems = soup.select("[class*=WSJTheme--cr_num] *")
-    if len(market_value_elems) > 2:
-        output["company_value"] = parse_to_int(market_value_elems[1].decode_contents())
-    else:
-        logging.info("Failed to get company value from " + url)
-
+    if len(market_value_elems) > 1:
+        output["market_value"] = parse_to_int(market_value_elems[1].decode_contents())
 
     key_stock_data = soup.select("[class*=cr_data_field]")
 
