@@ -14,8 +14,11 @@ class CompanyData:
     url : str = ""
     name : str = ""
 
+    company_value = None
     shares_outstanding = None
     public_float = None
+    overview_currency = None #Will hold something like "$"
+
     assets_currency_type = None #Will hold something like "CAD"
     net_property_plant_and_equipment = None
     total_assets = None
@@ -33,12 +36,13 @@ def get_company_data(name: str, url: str) -> CompanyData:
     """Creates a CompanyData object and tries to fill all its datapoints"""
     company_data = CompanyData(name, url)
 
-    #First 2 datapoints - shares_outstanding & public_float
     overview_data = get_overview_data(url)
     if (not overview_data["shares_outstanding"] and not overview_data["public_float"]):
         logging.info("Requested data not found on company overview " + url + ", aborting")
         return company_data
       
+    company_data.company_value = overview_data["company_value"]
+    company_data.overview_currency = overview_data["overview_currency"]
     company_data.shares_outstanding = overview_data["shares_outstanding"]
     company_data.public_float = overview_data["public_float"]
 
@@ -67,23 +71,37 @@ def get_overview_data(url: str):
     """Returns dict with shares_outstanding and public_float"""
     html = __get_html(url)
     soup = BeautifulSoup(html, features="html.parser")
-    #key_stock_data = soup.select("[class*=cr_data_points]")
+
+    output = {
+        "shares_outstanding": None, 
+        "public_float": None, 
+        "company_value":None, 
+        "overview_currency": None
+    }
+
+    market_value_elems = soup.select("[class*=WSJTheme--cr_num] *")
+    if len(market_value_elems) < 2:
+        logging.info("Failed to get overview_data from " + url)
+        return output
+
+    output["overview_currency"] = market_value_elems[0].decode_contents()
+    output["company_value"] = parse_to_int(market_value_elems[1].decode_contents())
+
     key_stock_data = soup.select("[class*=cr_data_field]")
 
-    res = {"shares_outstanding": None, "public_float": None}
     for entry in key_stock_data:
         data_label =  entry.select_one("[class*=data_lbl]").decode_contents().strip()
         data_value_html = entry.select_one("[class*=data_data]")
         if not data_value_html:
             continue
         data_value = data_value_html.decode_contents()
-        
+
         if data_label == "Shares Outstanding":
-            res["shares_outstanding"] = parse_to_int(data_value)
+            output["shares_outstanding"] = parse_to_int(data_value)
         elif data_label == "Public Float":
-            res["public_float"] = parse_to_int(data_value)
+            output["public_float"] = parse_to_int(data_value)
     
-    return res
+    return output
 
 def get_balance_sheet_data(url : str):
     """Returns dict with assets_currency_type, net_property_plant_and_equipment, total_assets, total_liabilities and net_goodwill"""
