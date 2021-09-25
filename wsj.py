@@ -42,17 +42,19 @@ class CompanyData:
     def to_str(self):
         return str(self.__dict__)
 
-def get_company_data(name: str, url: str) -> CompanyData:
-    """Creates a CompanyData object and tries to fill all its datapoints"""
+def get_company_data(name: str, url: str) -> CompanyData or None:
+    """Creates a CompanyData object and tries to fill all its datapoints, return None if essential data is not found"""
     company_data = CompanyData(name, url)
 
     overview_data = get_overview_data(url)
+
+    #Check for essential overview data
     if (not overview_data["market_value"] or
         (not overview_data["shares_outstanding"] and not overview_data["public_float"])
     ):
-        logging.info("Requested data not found on company overview " + url + ", aborting")
-        return company_data
-      
+        logging.debug("Requested data not found on company overview " + url + ", aborting")
+        return None
+    
     company_data.market_value = overview_data["market_value"]
     company_data.shares_outstanding = overview_data["shares_outstanding"]
     company_data.public_float = overview_data["public_float"]
@@ -61,7 +63,6 @@ def get_company_data(name: str, url: str) -> CompanyData:
     if company_data.shares_outstanding != None and company_data.public_float != None:
       company_data.public_float = None
 
-    #Other datapoints
     balance_sheet_url = url + "/financials/annual/balance-sheet"
     balance_sheet_data = get_balance_sheet_data(balance_sheet_url)
 
@@ -70,6 +71,10 @@ def get_company_data(name: str, url: str) -> CompanyData:
     company_data.total_assets  = balance_sheet_data["total_assets"]
     company_data.total_liabilities  = balance_sheet_data["total_liabilities"]
     company_data.net_goodwill  = balance_sheet_data["net_goodwill"]
+    
+    #Check for essential balance sheet data
+    if not company_data.net_goodwill:
+        return None
 
     return company_data
 
@@ -124,7 +129,7 @@ def get_balance_sheet_data(url : str):
     
     tables = soup.select(".cr_dataTable")
     if len(tables) == 0:
-        logging.info("Failed to get balance_sheet_data from " + url)
+        logging.debug("Failed to get balance_sheet_data from " + url)
         return output
     
     assets_table = tables[0]
