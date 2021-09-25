@@ -33,12 +33,13 @@ class CompanyData:
     def get_fair_value(self)->float or None:
         res = None
         try:
-            AA = self.total_assets - self.net_property_plant_and_equipment - self.net_goodwill - self.total_assets
+            AA = self.total_assets - self.net_property_plant_and_equipment - self.net_goodwill - self.total_liabilities
             res = AA / self.shares_outstanding
         except TypeError:
             logging.warning("Cannot calculate fair_value of " + self.name)
 
         return res
+        
     def to_str(self):
         return str(self.__dict__)
 
