@@ -3,4 +3,5 @@
 __pycache__
 .vscode
 tests.py
+tests.csv
 output.html

@@ -39,7 +39,7 @@ class CompanyData:
             logging.warning("Cannot calculate fair_value of " + self.name)
 
         return res
-        
+
     def to_str(self):
         return str(self.__dict__)
 
@@ -74,7 +74,8 @@ def get_company_data(name: str, url: str) -> CompanyData or None:
     company_data.net_goodwill  = balance_sheet_data["net_goodwill"]
     
     #Check for essential balance sheet data
-    if not company_data.net_goodwill:
+    if not company_data.net_goodwill or not company_data.total_assets or not company_data.net_property_plant_and_equipment or not company_data.total_liabilities:
+        logging.debug("Requested data not found on balance sheet " + url + ", aborting")
         return None
 
     return company_data
